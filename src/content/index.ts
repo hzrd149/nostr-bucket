@@ -29,8 +29,6 @@ const activeStreams = new Map<
 
 // listen for messages from the injected script
 self.addEventListener("message", async (event) => {
-  debug("[CONTENT] Received message:", event.data);
-
   if (event.source !== window) {
     debug("[CONTENT] Ignoring message from different source");
     return;
@@ -50,8 +48,6 @@ self.addEventListener("message", async (event) => {
   }
 
   const message: RequestMessage = event.data;
-  debug("[CONTENT] Processing request:", message.method, "ID:", message.id);
-
   if (message.type === "request") {
     await handleRequest(message);
   }
@@ -80,7 +76,6 @@ async function handleRequest(message: RequestMessage) {
     }
   } catch (error) {
     debug("[CONTENT] Error handling request:", error);
-    console.error("Error handling request:", error);
 
     // Send error response
     const errorResponse: ResponseMessage = {

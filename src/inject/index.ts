@@ -42,8 +42,6 @@ const pendingResponses = new Map<
 
 // Message handler for responses from content script
 window.addEventListener("message", (event) => {
-  debug("[INJECT] Received message:", event.data);
-
   if (event.source !== window) {
     debug("[INJECT] Ignoring message from different source");
     return;
@@ -58,8 +56,6 @@ window.addEventListener("message", (event) => {
   }
 
   const message = event.data;
-  debug("[INJECT] Processing message type:", message.type);
-
   if (message.type === "response") {
     handleResponse(message);
   } else if (message.type === "stream") {
@@ -136,12 +132,13 @@ function handleStreamMessage(message: StreamMessage) {
     queue.push(message.event);
     streamQueues.set(streamId, queue);
 
-    // Resolve any waiting iterators
+    // Resolve any waiting iterators (they will consume from queue)
     const resolvers = streamResolvers.get(streamId) || [];
     if (resolvers.length > 0) {
       const resolver = resolvers.shift()!;
       debug("[INJECT] Resolving waiting iterator for stream:", streamId);
-      resolver({ done: false, value: message.event });
+      // Signal that there's data available - iterator will consume from queue
+      resolver({ done: false, value: null as any });
     }
   }
 }
@@ -187,7 +184,18 @@ function createAsyncIterator(
       // No events in queue, wait for more
       return new Promise((resolve) => {
         const resolvers = streamResolvers.get(streamId) || [];
-        resolvers.push(resolve);
+        resolvers.push((result) => {
+          // When woken up, check queue again (ignore the result value)
+          const currentQueue = streamQueues.get(streamId) || [];
+          if (currentQueue.length > 0) {
+            const event = currentQueue.shift()!;
+            streamQueues.set(streamId, currentQueue);
+            resolve({ done: false, value: event });
+          } else {
+            // Queue is still empty, this shouldn't happen but handle gracefully
+            resolve(result);
+          }
+        });
         streamResolvers.set(streamId, resolvers);
       });
     },

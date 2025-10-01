@@ -27,9 +27,6 @@ browser.runtime.onInstalled.addListener(async (details) => {
 // Handle messages from popup and content scripts
 browser.runtime.onMessage.addListener(
   async (request: BackgroundRequest, sender) => {
-    debug("[BACKGROUND] Received message:", request);
-    console.log("Background received message:", request);
-
     if (request.type === "rpc") {
       const tabId = sender.tab?.id;
       debug(

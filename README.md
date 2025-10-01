@@ -1,37 +1,14 @@
 # Nostr Bucket - Browser Extension
 
-A Nostr-powered browser extension that exposes a `window.nostrEvents` interface for interacting with Nostr events stored locally in the browser.
+A Nostr-powered browser extension that injects a `window.nostrEvents` interface into every browser tab, allowing web applications to interact with Nostr events stored locally in the browser.
 
-## Architecture
+## Injected Interface
 
-The extension consists of three main components:
+The extension automatically injects the `IWindowNostrEvents` interface (defined in `src/interface.ts`) into every browser tab, making it available as `window.nostrEvents`. This interface provides a complete Nostr event store API that web applications can use directly.
 
-### 1. Injected Script (`src/inject/index.ts`)
+## API Reference
 
-- Runs in the page context and exposes `window.nostrEvents`
-- Implements the `IWindowNostrEvents` interface
-- Communicates with content script via `window.postMessage`
-- Handles both async methods and stream subscriptions
-- Manages async iterators and event queues for streams
-
-### 2. Content Script (`src/content/index.ts`)
-
-- Runs in the content script context
-- Relays messages between injected script and background script
-- Uses `browser.runtime.sendMessage` to communicate with background
-- Manages stream subscriptions and cleanup
-
-### 3. Background Script (`src/background/index.ts`)
-
-- Runs as a service worker
-- Handles all database operations using IndexedDB
-- Implements RPC methods for async operations
-- Manages stream subscriptions and sends events back to content script
-- Uses `nostr-idb` for Nostr event storage
-
-## API
-
-The extension exposes `window.nostrEvents` with the following interface:
+The injected `window.nostrEvents` interface provides the following methods:
 
 ```typescript
 interface IWindowNostrEvents {
@@ -47,8 +24,42 @@ interface IWindowNostrEvents {
 
   // Stream methods
   filters(filters: Filter[]): AsyncIterable<NostrEvent>;
-  search(query: string, filters: Filter[]): AsyncIterable<NostrEvent>;
-  subscribe(filters: Filter[]): Subscription;
+  search?(query: string, filters: Filter[]): AsyncIterable<NostrEvent>;
+  subscribe?(filters: Filter[]): Subscription;
+}
+```
+
+**Note**: The `search` and `subscribe` methods are optional and may not be available depending on the underlying database's capabilities. Always check for their presence before using them.
+
+### Usage Example
+
+```javascript
+// Add an event to the store
+await window.nostrEvents.add(nostrEvent);
+
+// Get a specific event
+const event = await window.nostrEvents.event(eventId);
+
+// Stream events matching filters
+for await (const event of window.nostrEvents.filters([{ kinds: [1] }])) {
+  console.log("New note:", event);
+}
+
+// Subscribe to real-time updates (if available)
+if (window.nostrEvents.subscribe) {
+  const subscription = window.nostrEvents.subscribe([{ kinds: [1] }]);
+  for await (const event of subscription) {
+    console.log("Live note:", event);
+  }
+}
+
+// Search events (if available)
+if (window.nostrEvents.search) {
+  for await (const event of window.nostrEvents.search("bitcoin", [
+    { kinds: [1] },
+  ])) {
+    console.log("Search result:", event);
+  }
 }
 ```
 
@@ -128,61 +139,6 @@ pnpm package:chrome
 # For Firefox Add-ons
 pnpm package:firefox
 ```
-
-## Project Structure
-
-```
-src/
-├── App.tsx          # Main popup component
-├── popup.tsx        # Popup entry point
-├── content.ts       # Content script
-├── background.ts    # Background service worker
-└── App.css          # Popup styles
-
-public/
-└── manifest.json    # Extension manifest
-
-popup.html           # Popup HTML template
-```
-
-## Extension Components
-
-### Popup (`src/App.tsx`)
-
-- Counter functionality
-- Settings management
-- Content script injection testing
-- Chrome storage integration
-
-### Content Script (`src/content.ts`)
-
-- Page indicator injection
-- Message handling from popup/background
-- Auto-injection on page load
-
-### Background Script (`src/background.ts`)
-
-- Extension installation handling
-- Settings storage management
-- Message routing between components
-- Tab update monitoring
-
-## Development Notes
-
-- The extension uses Manifest V3 (Chrome) / Manifest V2 (Firefox compatible)
-- All Chrome APIs are properly typed with `@types/chrome`
-- The popup is sized at 350x500px for optimal UX
-- Content scripts run on all URLs (`<all_urls>`)
-- Settings are stored using Chrome's sync storage API
-
-## Building for Production
-
-The build process:
-
-1. Compiles TypeScript
-2. Bundles with Vite
-3. Copies manifest.json to dist folder
-4. Creates separate entry points for popup, content, and background scripts
 
 ## Contributing
 

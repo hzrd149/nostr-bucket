@@ -257,7 +257,6 @@ export async function handleRpcRequest(
     return { success: true, result };
   } catch (error) {
     debug("[BACKGROUND] Error handling RPC request:", error);
-    console.error("Error handling RPC request:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

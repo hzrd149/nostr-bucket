@@ -28,6 +28,11 @@ function esbuildPlugin(options: {
           minify: options.minify || false,
           sourcemap: true,
           external: [],
+          define: {
+            "process.env.NODE_ENV": JSON.stringify(
+              process.env.NODE_ENV || "production",
+            ),
+          },
         });
         console.log(`✅ ${options.name} script compiled with esbuild`);
       } catch (error) {
@@ -79,7 +84,7 @@ export default defineConfig({
   },
   define: {
     "process.env.NODE_ENV": JSON.stringify(
-      process.env.NODE_ENV || "development",
+      process.env.NODE_ENV || "production",
     ),
   },
 });

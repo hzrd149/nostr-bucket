@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "prebuild": "tsc -b",
+    "build": "vite build",
+    "build:dev": "NODE_ENV=development pnpm build",
     "preview": "vite preview",
     "package:chrome": "pnpm build && cd dist && zip -r ../nostr-bucket-chrome.zip .",
     "package:firefox": "pnpm build && cd dist && zip -r ../nostr-bucket-firefox.zip .",

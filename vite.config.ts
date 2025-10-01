@@ -52,13 +52,18 @@ export default defineConfig({
       output: "dist/content.js",
       format: "iife",
     }),
+    esbuildPlugin({
+      name: "inject",
+      input: "src/inject/index.ts",
+      output: "dist/inject.js",
+      format: "iife",
+    }),
   ],
   publicDir: "public",
   build: {
     rollupOptions: {
       input: {
         popup: resolve(__dirname, "popup.html"),
-        inject: resolve(__dirname, "src/inject/index.ts"),
       },
       output: {
         entryFileNames: "[name].js",

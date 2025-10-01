@@ -27,7 +27,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["provider.js"],
+      "resources": ["provider.js", "inject.js"],
       "matches": [
         "https://*/*",
         "http://localhost:*/*",

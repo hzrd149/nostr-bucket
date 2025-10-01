@@ -27,7 +27,7 @@ export interface IWindowNostrEvents {
   filters(filters: Filter[]): AsyncIterable<NostrEvent>;
 
   /** Search for events by query and filters */
-  search(query: string, filters: Filter[]): AsyncIterable<NostrEvent>;
+  search?: (query: string, filters: Filter[]) => AsyncIterable<NostrEvent>;
 
   /** Subscribe to events in the database based on filters */
   subscribe(filters: Filter[]): Subscription;

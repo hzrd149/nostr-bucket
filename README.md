@@ -1,14 +1,66 @@
 # Nostr Bucket - Browser Extension
 
-A Nostr-powered browser extension built with SolidJS and Vite, compatible with both Chrome and Firefox.
+A Nostr-powered browser extension that exposes a `window.nostrEvents` interface for interacting with Nostr events stored locally in the browser.
+
+## Architecture
+
+The extension consists of three main components:
+
+### 1. Injected Script (`src/inject/index.ts`)
+
+- Runs in the page context and exposes `window.nostrEvents`
+- Implements the `IWindowNostrEvents` interface
+- Communicates with content script via `window.postMessage`
+- Handles both async methods and stream subscriptions
+- Manages async iterators and event queues for streams
+
+### 2. Content Script (`src/content/index.ts`)
+
+- Runs in the content script context
+- Relays messages between injected script and background script
+- Uses `browser.runtime.sendMessage` to communicate with background
+- Manages stream subscriptions and cleanup
+
+### 3. Background Script (`src/background/index.ts`)
+
+- Runs as a service worker
+- Handles all database operations using IndexedDB
+- Implements RPC methods for async operations
+- Manages stream subscriptions and sends events back to content script
+- Uses `nostr-idb` for Nostr event storage
+
+## API
+
+The extension exposes `window.nostrEvents` with the following interface:
+
+```typescript
+interface IWindowNostrEvents {
+  // Async methods
+  add(event: NostrEvent): Promise<boolean>;
+  event(id: string): Promise<NostrEvent | undefined>;
+  replaceable(
+    kind: number,
+    author: string,
+    identifier?: string,
+  ): Promise<NostrEvent | undefined>;
+  count(filters: Filter[]): Promise<number>;
+
+  // Stream methods
+  filters(filters: Filter[]): AsyncIterable<NostrEvent>;
+  search(query: string, filters: Filter[]): AsyncIterable<NostrEvent>;
+  subscribe(filters: Filter[]): Subscription;
+}
+```
 
 ## Features
 
-- **Popup Interface**: Clean, modern popup UI built with SolidJS
-- **Content Script**: Injects indicators and interacts with web pages
-- **Background Service Worker**: Handles extension lifecycle and messaging
-- **Settings Storage**: Persistent settings using Chrome storage API
-- **Cross-Browser**: Compatible with Chrome and Firefox
+- ✅ Async methods (add, event, replaceable, count)
+- ✅ Stream methods (filters, search, subscribe)
+- ✅ Proper error handling and cleanup
+- ✅ TypeScript support
+- ✅ IndexedDB storage using nostr-idb
+- ✅ Cross-tab communication
+- ✅ Stream subscription management
 
 ## Development
 

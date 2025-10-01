@@ -44,7 +44,7 @@ export default defineConfig({
       name: "background",
       input: "src/background/index.ts",
       output: "dist/background.js",
-      format: "esm",
+      format: "iife",
     }),
     esbuildPlugin({
       name: "content",
@@ -58,6 +58,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: resolve(__dirname, "popup.html"),
+        inject: resolve(__dirname, "src/inject/index.ts"),
       },
       output: {
         entryFileNames: "[name].js",

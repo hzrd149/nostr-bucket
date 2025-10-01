@@ -13,7 +13,8 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": true
     }
   ],
   "background": {
@@ -23,5 +24,17 @@
     "16": "vite.svg",
     "48": "vite.svg",
     "128": "vite.svg"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["provider.js"],
+      "matches": [
+        "https://*/*",
+        "http://localhost:*/*",
+        "http://0.0.0.0:*/*",
+        "http://127.0.0.1:*/*",
+        "http://*.localhost/*"
+      ]
+    }
+  ]
 }

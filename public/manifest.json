@@ -43,5 +43,8 @@
         "required": ["none"]
       }
     }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self';"
   }
 }

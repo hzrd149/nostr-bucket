@@ -1,8 +1,8 @@
-import type { IWindowNostrEvents } from "./interface";
+import type { IWindowNostrDB } from "./interface";
 
 declare global {
   interface Window {
-    nostrEvents: IWindowNostrEvents;
+    nostrdb: IWindowNostrDB;
   }
 }
 

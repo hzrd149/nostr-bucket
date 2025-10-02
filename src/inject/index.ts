@@ -1,6 +1,6 @@
 import type { Filter, NostrEvent } from "nostr-tools";
 import type {
-  IWindowNostrEvents,
+  IWindowNostrDB,
   Subscription,
   StreamHandlers,
   Features,
@@ -180,7 +180,7 @@ function sendMessage(message: RequestMessage): Promise<unknown> {
 }
 
 // Implement the IWindowNostrEvents interface
-const nostrEvents: IWindowNostrEvents = {
+const nostrdb: IWindowNostrDB = {
   async add(event: NostrEvent): Promise<boolean> {
     const id = generateId();
     const message: RequestMessage = {
@@ -362,4 +362,4 @@ const nostrEvents: IWindowNostrEvents = {
 };
 
 // Expose the interface on window
-window.nostrEvents = nostrEvents;
+window.nostrdb = nostrdb;

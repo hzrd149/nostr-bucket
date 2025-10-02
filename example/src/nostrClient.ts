@@ -40,9 +40,9 @@ export class NostrClient {
       ],
       {
         onevent: async (event: NostrEvent) => {
-          // Cache the event using window.nostrEvents API
-          if (window.nostrEvents) {
-            await window.nostrEvents.add(event);
+          // Cache the event using window.nostrdb API
+          if (window.nostrdb) {
+            await window.nostrdb.add(event);
           }
 
           // Try to get author metadata if available
@@ -64,9 +64,9 @@ export class NostrClient {
     pubkey: string,
   ): Promise<TimelineEvent["author"]> {
     // First try to get from cache
-    if (window.nostrEvents) {
+    if (window.nostrdb) {
       try {
-        const cachedProfile = await window.nostrEvents.replaceable(0, pubkey);
+        const cachedProfile = await window.nostrdb.replaceable(0, pubkey);
         if (cachedProfile) {
           try {
             const metadata = JSON.parse(cachedProfile.content);
@@ -106,9 +106,9 @@ export class NostrClient {
               events.push(event);
 
               // Cache the profile event
-              if (window.nostrEvents) {
+              if (window.nostrdb) {
                 try {
-                  await window.nostrEvents.add(event);
+                  await window.nostrdb.add(event);
                 } catch (error) {
                   console.error("Failed to cache profile event:", error);
                 }
@@ -143,7 +143,7 @@ export class NostrClient {
   async loadCachedProfilesForEvents(
     events: TimelineEvent[],
   ): Promise<TimelineEvent[]> {
-    if (!window.nostrEvents) {
+    if (!window.nostrdb) {
       return events;
     }
 
@@ -158,10 +158,7 @@ export class NostrClient {
 
       // Try to get cached profile
       try {
-        const cachedProfile = await window.nostrEvents.replaceable(
-          0,
-          event.pubkey,
-        );
+        const cachedProfile = await window.nostrdb.replaceable(0, event.pubkey);
         if (cachedProfile) {
           const metadata = JSON.parse(cachedProfile.content);
           updatedEvents.push({

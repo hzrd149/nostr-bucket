@@ -1,25 +1,27 @@
-# Nostr Bucket - Browser Extension
+# NIP-DB: Browser Nostr Event Database Interface
 
-A Nostr-powered browser extension that implements the [NIP-DB specification](nip.md) by injecting a `window.nostrdb` interface into every browser tab, allowing web applications to interact with Nostr events stored locally in the browser.
+## Abstract
 
-## NIP-DB Implementation
+This NIP defines a standard interface for browser extensions that provide local Nostr event storage capabilities to web applications. The interface allows web applications to interact with Nostr events stored locally in the browser through a standardized `window.nostrdb` API.
 
-This extension implements the NIP-DB specification, providing a standardized interface for browser-based Nostr event storage. The specification defines a common API that browser extensions can implement to provide Nostr event storage services to web applications.
+## Motivation
 
-## Injected Interface
+Browser extensions can provide valuable local storage and caching capabilities for Nostr events, improving performance and enabling offline functionality.
 
-The extension automatically injects the `IWindowNostrDB` interface (defined in `src/interface.ts`) into every browser tab, making it available as `window.nostrdb`. This interface provides a complete Nostr event store API that web applications can use directly.
+This NIP establishes a common interface that browser extensions can implement to provide Nostr event storage services to web applications.
 
-## API Reference
+## Specification
 
-The injected `window.nostrdb` interface provides the following methods:
+### Interface Definition
+
+Browser extensions implementing this NIP MUST inject a `window.nostrdb` object that implements the following interface:
 
 ```typescript
 interface IWindowNostrDB {
   /** Add an event to the database */
   add(event: NostrEvent): Promise<boolean>;
 
-  /** Get a single event */
+  /** Get a single event by ID */
   event(id: string): Promise<NostrEvent | undefined>;
 
   /** Get the latest version of a replaceable event */
@@ -29,11 +31,11 @@ interface IWindowNostrDB {
     identifier?: string,
   ): Promise<NostrEvent | undefined>;
 
-  /** Count the number of events matching a filter */
+  /** Count the number of events matching filters */
   count(filters: Filter[]): Promise<number>;
 
   /** Check if the database backend supports a feature */
-  supports(feature: Features): Promise<boolean>;
+  supports(feature: string): Promise<boolean>;
 
   /** Get events by filters */
   filters(filters: Filter[], handlers?: StreamHandlers): Subscription;
@@ -56,12 +58,6 @@ type StreamHandlers = {
   error?: (error: Error) => void;
   complete?: () => void;
 };
-
-/** Standard enums for feature checks */
-enum Features {
-  Search = "search",
-  Subscribe = "subscribe",
-}
 ```
 
 ### Feature Detection
@@ -70,6 +66,13 @@ The `supports()` method allows web applications to check for optional features:
 
 - `"search"` - NIP-50 full-text search capabilities
 - `"subscribe"` - Real-time subscription support
+
+### Implementation Requirements
+
+1. **Injection**: The interface MUST be injected into every web page via content scripts
+2. **Availability**: The interface MUST be available as `window.nostrdb` after DOM content is loaded
+3. **Error Handling**: All methods MUST handle errors gracefully and return appropriate error states
+4. **Thread Safety**: The interface MUST be safe to use from multiple contexts
 
 ### Usage Examples
 
@@ -117,27 +120,10 @@ if (await window.nostrdb.supports("subscribe")) {
 }
 ```
 
-## Features
+## Reference Implementation
 
-- ✅ NIP-DB specification compliant
-- ✅ Async methods (add, event, replaceable, count)
-- ✅ Stream methods with handler-based subscriptions (filters, subscribe)
-- ✅ Feature detection via supports() method
-- ✅ Proper error handling and cleanup
-- ✅ TypeScript support
-- ✅ IndexedDB storage using nostr-idb
-- ✅ Cross-tab communication
-- ✅ Stream subscription management
+A reference implementation is available at: [nostr-bucket](https://github.com/hzrd149/nostr-bucket)
 
-## Contributing
+## Copyright
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Ensure compliance with the [NIP-DB specification](nip.md)
-5. Test in both Chrome and Firefox
-6. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details
+This NIP is released into the public domain.

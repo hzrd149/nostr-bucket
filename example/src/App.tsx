@@ -17,7 +17,7 @@ function App() {
   const loadCachedProfilesForEvents = async (
     events: TimelineEvent[],
   ): Promise<TimelineEvent[]> => {
-    if (!window.nostrEvents) {
+    if (!window.nostrdb) {
       return events;
     }
 
@@ -32,10 +32,7 @@ function App() {
 
       // Try to get cached profile
       try {
-        const cachedProfile = await window.nostrEvents.replaceable(
-          0,
-          event.pubkey,
-        );
+        const cachedProfile = await window.nostrdb.replaceable(0, event.pubkey);
         if (cachedProfile) {
           const metadata = JSON.parse(cachedProfile.content);
           updatedEvents.push({
@@ -62,7 +59,7 @@ function App() {
   };
 
   const loadFromCacheOnly = async () => {
-    if (!window.nostrEvents) {
+    if (!window.nostrdb) {
       setError("No nostrEvents cache available");
       return;
     }
@@ -74,7 +71,7 @@ function App() {
       setIsConnected(true);
 
       const cachedEvents: TimelineEvent[] = [];
-      for await (const event of window.nostrEvents.filters([{ kinds: [1] }])) {
+      for await (const event of window.nostrdb.filters([{ kinds: [1] }])) {
         cachedEvents.push({ ...event });
       }
       cachedEvents.sort((a, b) => b.created_at - a.created_at);
@@ -111,12 +108,10 @@ function App() {
       setIsConnected(true);
 
       // Load cached events if available
-      if (window.nostrEvents) {
+      if (window.nostrdb) {
         const cachedEvents: TimelineEvent[] = [];
         try {
-          for await (const event of window.nostrEvents.filters([
-            { kinds: [1] },
-          ])) {
+          for await (const event of window.nostrdb.filters([{ kinds: [1] }])) {
             cachedEvents.push({ ...event });
           }
           cachedEvents.sort((a, b) => b.created_at - a.created_at);

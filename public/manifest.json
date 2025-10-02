@@ -21,9 +21,10 @@
     "service_worker": "background.js"
   },
   "icons": {
-    "16": "vite.svg",
-    "48": "vite.svg",
-    "128": "vite.svg"
+    "16": "icon-16.png",
+    "24": "icon-24.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
   },
   "web_accessible_resources": [
     {

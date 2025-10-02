@@ -18,7 +18,7 @@ export enum Features {
 }
 
 /** Main interface for the nostr event store */
-export interface IWindowNostrEvents {
+export interface IWindowNostrDB {
   /** Add an event to the database */
   add(event: NostrEvent): Promise<boolean>;
 

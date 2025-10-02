@@ -8,7 +8,7 @@ import type {
 import { EXTENSION_ID } from "../common/const";
 import { debug } from "../common/debug";
 
-// inject the script that will provide window.nostrEvents
+// inject the script that will provide window.nostrdb
 debug("[CONTENT] Injecting script...");
 let script = document.createElement("script");
 script.setAttribute("async", "false");

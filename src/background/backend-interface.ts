@@ -1,10 +1,10 @@
-import type { IWindowNostrEvents } from "../interface";
+import type { IWindowNostrDB } from "../interface";
 
 /**
  * Common interface for all backend implementations
  * Extends IWindowNostrEvents to maintain consistency with the main interface
  */
-export interface IBackend extends IWindowNostrEvents {
+export interface IBackend extends IWindowNostrDB {
   /** Connect to the backend */
   connect(): Promise<void>;
 

@@ -60,18 +60,13 @@ async function handleRequest(message: RequestMessage) {
       message.method,
     );
 
-    debug(
-      "[CONTENT] Handling request:",
-      message.method,
-      "Is stream:",
-      isStreamMethod,
-    );
-
     if (isStreamMethod) {
       // Handle stream methods
+      debug("[CONTENT] Handling stream:", message.method);
       await handleStreamRequest(message);
     } else {
       // Handle regular async methods
+      debug("[CONTENT] Handling request:", message.method);
       await handleAsyncRequest(message);
     }
   } catch (error) {

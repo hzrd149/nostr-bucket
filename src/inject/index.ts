@@ -1,5 +1,10 @@
 import type { Filter, NostrEvent } from "nostr-tools";
-import type { IWindowNostrEvents, Subscription } from "../interface";
+import type {
+  IWindowNostrEvents,
+  Subscription,
+  StreamHandlers,
+  Features,
+} from "../interface";
 import type {
   RequestMessage,
   ResponseMessage,
@@ -24,12 +29,8 @@ function generateStreamId(): string {
 // Active stream subscriptions
 const activeStreams = new Map<string, StreamSubscription>();
 
-// Stream event queues for async iterators
-const streamQueues = new Map<string, NostrEvent[]>();
-const streamResolvers = new Map<
-  string,
-  ((value: IteratorResult<NostrEvent>) => void)[]
->();
+// Stream handlers for each active stream
+const streamHandlers = new Map<string, StreamHandlers>();
 
 // Internal response handlers - not attached to window
 const pendingResponses = new Map<
@@ -89,57 +90,68 @@ function handleResponse(message: ResponseMessage) {
 
 function handleStreamMessage(message: StreamMessage) {
   const streamId = message.streamId;
-  debug(
-    "[INJECT] Handling stream message for ID:",
-    streamId,
-    "Done:",
-    message.done,
-    "Error:",
-    message.error,
-  );
+  const handlers = streamHandlers.get(streamId);
 
   if (message.done) {
     // Stream is complete
     debug("[INJECT] Stream completed for ID:", streamId);
-    const resolvers = streamResolvers.get(streamId) || [];
-    resolvers.forEach((resolve) => resolve({ done: true, value: undefined }));
-    streamResolvers.delete(streamId);
-    streamQueues.delete(streamId);
+
+    // Call completion handler if provided
+    if (handlers?.complete) {
+      debug("[INJECT] Calling completion handler for stream:", streamId);
+      try {
+        handlers.complete();
+      } catch (error) {
+        debug("[INJECT] Error in completion handler:", error);
+      }
+    }
+
+    // Clean up stream tracking
+    debug(
+      "[INJECT] Cleaning up stream tracking for completed stream:",
+      streamId,
+    );
     activeStreams.delete(streamId);
+    streamHandlers.delete(streamId);
     return;
   }
 
   if (message.error) {
     // Stream error
     debug("[INJECT] Stream error for ID:", streamId, "Error:", message.error);
-    const resolvers = streamResolvers.get(streamId) || [];
-    resolvers.forEach((resolve) => resolve({ done: true, value: undefined }));
-    streamResolvers.delete(streamId);
-    streamQueues.delete(streamId);
+
+    // Call error handler if provided
+    if (handlers?.error) {
+      try {
+        handlers.error(new Error(message.error));
+      } catch (error) {
+        debug("[INJECT] Error in error handler:", error);
+      }
+    } else debug("[INJECT] No error handler registered for stream:", streamId);
+
+    // Clean up stream tracking
+    debug("[INJECT] Cleaning up stream tracking for errored stream:", streamId);
     activeStreams.delete(streamId);
+    streamHandlers.delete(streamId);
     return;
   }
 
   if (message.event) {
-    // Add event to queue
     debug(
-      "[INJECT] Adding event to stream queue:",
+      "[INJECT] Processing event for stream:",
       streamId,
       "Event ID:",
       message.event.id,
     );
-    const queue = streamQueues.get(streamId) || [];
-    queue.push(message.event);
-    streamQueues.set(streamId, queue);
 
-    // Resolve any waiting iterators (they will consume from queue)
-    const resolvers = streamResolvers.get(streamId) || [];
-    if (resolvers.length > 0) {
-      const resolver = resolvers.shift()!;
-      debug("[INJECT] Resolving waiting iterator for stream:", streamId);
-      // Signal that there's data available - iterator will consume from queue
-      resolver({ done: false, value: null as any });
-    }
+    // Call event handler if provided
+    if (handlers?.event) {
+      try {
+        handlers.event(message.event);
+      } catch (error) {
+        debug("[INJECT] Error in event handler:", error);
+      }
+    } else debug("[INJECT] No event handler registered for stream:", streamId);
   }
 }
 
@@ -165,45 +177,6 @@ function sendMessage(message: RequestMessage): Promise<unknown> {
     // Send message
     window.postMessage(message, "*");
   });
-}
-
-// Create async iterator for streams
-function createAsyncIterator(
-  streamId: string,
-): AsyncIterableIterator<NostrEvent> {
-  return {
-    async next(): Promise<IteratorResult<NostrEvent>> {
-      const queue = streamQueues.get(streamId) || [];
-
-      if (queue.length > 0) {
-        const event = queue.shift()!;
-        streamQueues.set(streamId, queue);
-        return { done: false, value: event };
-      }
-
-      // No events in queue, wait for more
-      return new Promise((resolve) => {
-        const resolvers = streamResolvers.get(streamId) || [];
-        resolvers.push((result) => {
-          // When woken up, check queue again (ignore the result value)
-          const currentQueue = streamQueues.get(streamId) || [];
-          if (currentQueue.length > 0) {
-            const event = currentQueue.shift()!;
-            streamQueues.set(streamId, currentQueue);
-            resolve({ done: false, value: event });
-          } else {
-            // Queue is still empty, this shouldn't happen but handle gracefully
-            resolve(result);
-          }
-        });
-        streamResolvers.set(streamId, resolvers);
-      });
-    },
-
-    [Symbol.asyncIterator]() {
-      return this;
-    },
-  };
 }
 
 // Implement the IWindowNostrEvents interface
@@ -268,7 +241,7 @@ const nostrEvents: IWindowNostrEvents = {
     return Number(result) || 0;
   },
 
-  filters(filters: Filter[]): AsyncIterable<NostrEvent> {
+  filters(filters: Filter[], handlers?: StreamHandlers): Subscription {
     const id = generateStreamId();
     const message: RequestMessage = {
       id,
@@ -278,6 +251,8 @@ const nostrEvents: IWindowNostrEvents = {
       params: [filters],
     };
 
+    debug("[INJECT] Creating filters stream:", id, "Filters:", filters.length);
+
     // Register stream
     activeStreams.set(id, {
       id,
@@ -286,74 +261,19 @@ const nostrEvents: IWindowNostrEvents = {
       active: true,
     });
 
-    // Initialize queue and resolvers
-    streamQueues.set(id, []);
-    streamResolvers.set(id, []);
+    // Store handlers if provided
+    if (handlers) {
+      debug("[INJECT] Storing StreamHandlers for filters stream:", id);
+      streamHandlers.set(id, handlers);
+    }
 
     // Send message
+    debug("[INJECT] Sending filters request for stream:", id);
     window.postMessage(message, "*");
-
-    return createAsyncIterator(id);
-  },
-
-  search(query: string, filters: Filter[]): AsyncIterable<NostrEvent> {
-    const id = generateStreamId();
-    const message: RequestMessage = {
-      id,
-      ext: EXTENSION_ID,
-      type: "request",
-      method: "search",
-      params: [query, filters],
-    };
-
-    // Register stream
-    activeStreams.set(id, {
-      id,
-      method: "search",
-      params: [query, filters],
-      active: true,
-    });
-
-    // Initialize queue and resolvers
-    streamQueues.set(id, []);
-    streamResolvers.set(id, []);
-
-    // Send message
-    window.postMessage(message, "*");
-
-    return createAsyncIterator(id);
-  },
-
-  subscribe(filters: Filter[]): Subscription {
-    const id = generateStreamId();
-    const message: RequestMessage = {
-      id,
-      ext: EXTENSION_ID,
-      type: "request",
-      method: "subscribe",
-      params: [filters],
-    };
-
-    // Register stream
-    activeStreams.set(id, {
-      id,
-      method: "subscribe",
-      params: [filters],
-      active: true,
-    });
-
-    // Initialize queue and resolvers
-    streamQueues.set(id, []);
-    streamResolvers.set(id, []);
-
-    // Send message
-    window.postMessage(message, "*");
-
-    const iterator = createAsyncIterator(id);
 
     return {
-      ...iterator,
       close: () => {
+        debug("[INJECT] Closing filters stream:", id);
         // Send close message
         const closeMessage: RequestMessage = {
           id: generateId(),
@@ -366,10 +286,78 @@ const nostrEvents: IWindowNostrEvents = {
 
         // Clean up
         activeStreams.delete(id);
-        streamQueues.delete(id);
-        streamResolvers.delete(id);
+        streamHandlers.delete(id);
       },
     };
+  },
+
+  subscribe(filters: Filter[], handlers?: StreamHandlers): Subscription {
+    const id = generateStreamId();
+    const message: RequestMessage = {
+      id,
+      ext: EXTENSION_ID,
+      type: "request",
+      method: "subscribe",
+      params: [filters],
+    };
+
+    debug(
+      "[INJECT] Creating subscribe stream:",
+      id,
+      "Filters:",
+      filters.length,
+    );
+
+    // Register stream
+    activeStreams.set(id, {
+      id,
+      method: "subscribe",
+      params: [filters],
+      active: true,
+    });
+
+    // Store handlers if provided
+    if (handlers) {
+      debug("[INJECT] Storing StreamHandlers for subscribe stream:", id);
+      streamHandlers.set(id, handlers);
+    }
+
+    // Send message
+    debug("[INJECT] Sending subscribe request for stream:", id);
+    window.postMessage(message, "*");
+
+    return {
+      close: () => {
+        debug("[INJECT] Closing subscribe stream:", id);
+        // Send close message
+        const closeMessage: RequestMessage = {
+          id: generateId(),
+          ext: EXTENSION_ID,
+          type: "request",
+          method: "close_stream",
+          params: [id],
+        };
+        window.postMessage(closeMessage, "*");
+
+        // Clean up
+        activeStreams.delete(id);
+        streamHandlers.delete(id);
+      },
+    };
+  },
+
+  async supports(feature: Features): Promise<boolean> {
+    const requestId = generateId();
+    const message: RequestMessage = {
+      id: requestId,
+      ext: EXTENSION_ID,
+      type: "request",
+      method: "supports",
+      params: [feature],
+    };
+
+    const result = await sendMessage(message);
+    return Boolean(result);
   },
 };
 

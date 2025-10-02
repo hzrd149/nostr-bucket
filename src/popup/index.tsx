@@ -1,7 +1,6 @@
-import "./polyfill";
+import "webextension-polyfill";
 import { render } from "solid-js/web";
 import App from "./App";
-import "./App.css";
 import "./index.css";
 
 const root = document.getElementById("root");

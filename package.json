@@ -14,16 +14,21 @@
     "start:firefox": "web-ext run --source-dir ./dist/"
   },
   "dependencies": {
+    "applesauce-relay": "^4.0.0",
     "nostr-idb": "^2.4.0",
     "nostr-tools": "^2.17.0",
+    "rxjs": "^7.8.2",
     "solid-js": "^1.9.9",
     "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
     "@types/node": "^20.0.0",
     "@types/webextension-polyfill": "^0.12.4",
+    "daisyui": "^5.1.26",
     "esbuild": "^0.25.10",
     "prettier": "^3.6.2",
+    "tailwindcss": "^4.1.14",
     "typescript": "~5.8.3",
     "vite": "^7.1.7",
     "vite-plugin-solid": "^2.11.8",

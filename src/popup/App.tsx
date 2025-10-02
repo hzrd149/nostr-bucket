@@ -1,90 +1,90 @@
 import { createSignal, onMount } from "solid-js";
-import "./App.css";
 import browser from "webextension-polyfill";
 
+interface RpcResponse<T = unknown> {
+  success: boolean;
+  result?: T;
+  error?: string;
+}
+
 function App() {
-  const [count, setCount] = createSignal(0);
-  const [settings, setSettings] = createSignal({
-    autoDetect: true,
-    notifications: true,
-  } as { autoDetect: boolean; notifications: boolean });
+  const [currentBackend, setCurrentBackend] = createSignal<string | null>(null);
+  const [loading, setLoading] = createSignal(false);
 
   onMount(async () => {
-    // Load settings from storage
-    const response = await browser.runtime.sendMessage<
-      { action: string },
-      | {
-          autoDetect: boolean;
-          notifications: boolean;
-        }
-      | undefined
-    >({
-      action: "getSettings",
-    });
-    if (response) setSettings(response);
+    await loadBackendStatus();
   });
 
-  const handleInjectIndicator = async () => {
-    const response = await browser.runtime.sendMessage({
-      action: "injectIndicator",
-    });
-    console.log("Indicator injection response:", response);
+  const loadBackendStatus = async () => {
+    setLoading(true);
+    try {
+      // Get current backend
+      const currentResponse = (await browser.runtime.sendMessage({
+        type: "rpc",
+        method: "get_backend",
+        params: [],
+        host: "popup",
+      })) as RpcResponse<string | null>;
+
+      if (currentResponse.success) {
+        setCurrentBackend(currentResponse.result || null);
+      }
+    } catch (error) {
+      console.error("Failed to load backend status:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleToggleSetting = (key: "autoDetect" | "notifications") => {
-    const currentSettings = settings();
-    const newSettings = { ...currentSettings, [key]: !currentSettings[key] };
-    setSettings(newSettings);
-    browser.runtime.sendMessage({
-      action: "updateSettings",
-      settings: newSettings,
-    });
+  const handleSwitchBackend = async (backendType: "idb" | "relay") => {
+    setLoading(true);
+    try {
+      const response = (await browser.runtime.sendMessage({
+        type: "rpc",
+        method: "set_backend",
+        params: [backendType],
+        host: "popup",
+      })) as RpcResponse<string>;
+
+      if (response.success) {
+        await loadBackendStatus(); // Refresh status
+      } else {
+        console.error("Failed to switch backend:", response.error);
+      }
+    } catch (error) {
+      console.error("Error switching backend:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div class="popup-container">
-      <header class="popup-header">
-        <h1>Nostr Bucket</h1>
-        <p>Your Nostr-powered browser companion</p>
-      </header>
+    <div class="w-full h-full bg-base-100 flex flex-col">
+      <div class="bg-primary text-primary-content p-4 text-center">
+        <h1 class="text-xl font-bold">Nostr Bucket</h1>
+      </div>
 
-      <main class="popup-main">
-        <div class="card">
-          <button onClick={() => setCount((count) => count + 1)}>
-            Counter: {count()}
-          </button>
-          <p>Click to increment the counter</p>
-        </div>
+      <div class="flex-1 p-4 flex flex-col justify-center gap-4">
+        <button
+          onClick={() => handleSwitchBackend("relay")}
+          disabled={loading() || currentBackend() === "relay"}
+          class={`btn w-full h-16 text-lg ${
+            currentBackend() === "relay" ? "btn-success" : "btn-neutral"
+          } ${loading() ? "loading" : ""}`}
+        >
+          {!loading() && "🌐"} Local Relay
+        </button>
 
-        <div class="card">
-          <button onClick={handleInjectIndicator}>Inject Page Indicator</button>
-          <p>Test content script injection</p>
-        </div>
-
-        <div class="settings">
-          <h3>Settings</h3>
-          <label class="setting-item">
-            <input
-              type="checkbox"
-              checked={settings().autoDetect}
-              onChange={() => handleToggleSetting("autoDetect")}
-            />
-            Auto-detect Nostr content
-          </label>
-          <label class="setting-item">
-            <input
-              type="checkbox"
-              checked={settings().notifications}
-              onChange={() => handleToggleSetting("notifications")}
-            />
-            Enable notifications
-          </label>
-        </div>
-      </main>
-
-      <footer class="popup-footer">
-        <p>Built with SolidJS + Vite</p>
-      </footer>
+        <button
+          onClick={() => handleSwitchBackend("idb")}
+          disabled={loading() || currentBackend() === "idb"}
+          class={`btn w-full h-16 text-lg ${
+            currentBackend() === "idb" ? "btn-success" : "btn-neutral"
+          } ${loading() ? "loading" : ""}`}
+        >
+          {!loading() && "💾"} IndexedDB
+        </button>
+      </div>
     </div>
   );
 }

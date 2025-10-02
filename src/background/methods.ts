@@ -1,30 +1,81 @@
-import {
-  addEvents,
-  countEventsForFilters,
-  getEventsForFilters,
-  getEventsFromAddressPointers,
-} from "nostr-idb";
 import type { Filter, NostrEvent } from "nostr-tools";
-import getNostrIdb from "./idb";
+import { NostrIdbBackend } from "./backends/nostr-idb";
+import { LocalRelayBackend } from "./backends/local-relay";
+import { BackendManager } from "./backend-manager";
+import { debug } from "../common/debug";
+import type { Subscription, StreamHandlers, Features } from "../interface";
+
+// Backend type definition
+export type BackendType = "idb" | "relay";
+
+// Backend manager instance
+const backendManager = new BackendManager();
+
+// Initialize backends with priority order
+const nostrIdbBackend = new NostrIdbBackend();
+const localRelayBackend = new LocalRelayBackend("ws://localhost:4869");
+
+// Add backends to manager with priority (lower number = higher priority)
+backendManager.addBackend({
+  id: "relay",
+  name: "Local Relay",
+  priority: 1,
+  backend: localRelayBackend,
+});
+backendManager.addBackend({
+  id: "idb",
+  name: "IndexedDB",
+  priority: 2,
+  backend: nostrIdbBackend,
+});
+
+/**
+ * Set the backend type and manage connections with fallback
+ */
+export async function setBackend(backendType: BackendType): Promise<void> {
+  debug("[METHODS] Setting backend to:", backendType);
+
+  // Stop current health check
+  backendManager.stopHealthCheck();
+
+  // Try to connect to the requested backend first, then fallback to others
+  const connected = await backendManager.connect();
+  if (!connected) {
+    debug("[METHODS] Failed to connect to any backend");
+    throw new Error(`Failed to connect to any backend`);
+  }
+
+  debug("[METHODS] Successfully connected to backend");
+
+  // Restart health check monitoring
+  backendManager.startHealthCheck();
+}
+
+/**
+ * Get the current backend instance
+ */
+function getCurrentBackend() {
+  const backend = backendManager.getCurrentBackend();
+  if (!backend) {
+    throw new Error("No backend is currently connected");
+  }
+  return backend;
+}
 
 /**
  * Get a single event by its ID
  */
 export async function getEvent(id: string): Promise<NostrEvent | undefined> {
-  const nostrIdb = await getNostrIdb();
-  const tx = nostrIdb.transaction("events", "readonly");
-  const store = tx.objectStore("events");
-  const result = await store.get(id);
-  return result?.event;
+  const backend = getCurrentBackend();
+  return await backend.event(id);
 }
 
 /**
  * Add a single event to the database
  */
 export async function addEvent(event: NostrEvent): Promise<boolean> {
-  const nostrIdb = await getNostrIdb();
-  await addEvents(nostrIdb, [event]);
-  return true;
+  const backend = getCurrentBackend();
+  return await backend.add(event);
 }
 
 /**
@@ -35,49 +86,109 @@ export async function getReplaceableEvent(
   author: string,
   identifier?: string,
 ): Promise<NostrEvent | undefined> {
-  const nostrIdb = await getNostrIdb();
-
-  const events = await getEventsFromAddressPointers(nostrIdb, [
-    { kind, pubkey: author, identifier },
-  ]);
-
-  // Return the latest event (highest created_at)
-  if (events.length === 0) return undefined;
-  return events.reduce((a, b) => (b.created_at > a.created_at ? b : a));
+  const backend = getCurrentBackend();
+  return await backend.replaceable(kind, author, identifier);
 }
 
 /**
  * Count events matching the given filters
  */
 export async function countEvents(filters: Filter[]): Promise<number> {
-  const nostrIdb = await getNostrIdb();
-
-  return await countEventsForFilters(nostrIdb, filters);
+  const backend = getCurrentBackend();
+  return await backend.count(filters);
 }
 
 /**
- * Get events matching the given filters as an async iterator
+ * Get events matching the given filters
  */
-export async function* getEventsByFilters(
+export function getEventsByFilters(
   filters: Filter[],
-): AsyncIterableIterator<NostrEvent> {
-  const nostrIdb = await getNostrIdb();
-  const events = await getEventsForFilters(nostrIdb, filters);
-
-  for (const item of events) yield item;
+  handlers?: StreamHandlers,
+): Subscription {
+  const backend = getCurrentBackend();
+  return backend.filters(filters, handlers);
 }
 
 /**
- * Search events by query string and filters as an async iterator
+ * Subscribe to events based on filters
  */
-export async function* searchEvents(
-  query: string,
+export function subscribeToEvents(
   filters: Filter[],
-): AsyncIterableIterator<NostrEvent> {
-  const searchLower = query.toLowerCase();
+  handlers?: StreamHandlers,
+): Subscription {
+  const backend = getCurrentBackend();
+  return backend.subscribe(filters, handlers);
+}
 
-  const events = getEventsByFilters(filters);
-  for await (let item of events) {
-    if (item.content.toLowerCase().includes(searchLower)) yield item;
+/**
+ * Check if the current backend supports a feature
+ */
+export async function supportsFeature(feature: Features): Promise<boolean> {
+  const backend = getCurrentBackend();
+  return await backend.supports(feature);
+}
+
+/**
+ * Initialize backends with priority-based connection and fallback
+ */
+export async function initializeBackend(): Promise<void> {
+  debug("[METHODS] Initializing backends with priority-based connection...");
+
+  const connected = await backendManager.connect();
+  if (!connected) {
+    debug("[METHODS] Failed to connect to any backend during initialization");
+    throw new Error("Failed to connect to any backend");
   }
+
+  const currentBackend = backendManager.getCurrentBackend();
+  debug(
+    "[METHODS] Successfully connected to backend:",
+    currentBackend ? "connected" : "none",
+  );
+
+  // Start health check monitoring to ensure continuous connection
+  backendManager.startHealthCheck();
+}
+
+/**
+ * Get the current backend type
+ */
+export function getCurrentBackendType(): BackendType | null {
+  const currentBackend = backendManager.getCurrentBackend();
+  if (!currentBackend) return null;
+
+  // Determine backend type based on the current backend instance
+  // We need to check the constructor name or use a different approach
+  if (currentBackend.constructor.name === "NostrIdbBackend") return "idb";
+  if (currentBackend.constructor.name === "LocalRelayBackend") return "relay";
+  return null;
+}
+
+/**
+ * Get connection status for all backends
+ */
+export function getBackendStatus() {
+  return backendManager.getConnectionStatus();
+}
+
+/**
+ * Get list of all available backends
+ */
+export function getBackends() {
+  return backendManager.getBackends();
+}
+
+/**
+ * Force reconnect to all backends
+ */
+export async function reconnectBackends(): Promise<boolean> {
+  debug("[METHODS] Force reconnecting to all backends...");
+  return await backendManager.reconnect();
+}
+
+/**
+ * Check if any backend is connected
+ */
+export function isBackendConnected(): boolean {
+  return backendManager.isConnected();
 }

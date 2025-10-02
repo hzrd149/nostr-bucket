@@ -2,10 +2,17 @@ import browser from "webextension-polyfill";
 import type { BackgroundRequest } from "../common/types";
 import { debug } from "../common/debug";
 import { handleRpcRequest, cleanupStreamsForTab } from "./rpc-handler";
+import { initializeBackend } from "./methods";
 
 // Background service worker for Nostr Bucket extension
 console.log("Nostr Bucket background script loaded");
 debug("[BACKGROUND] Service worker initialized");
+
+// Initialize the default backend
+initializeBackend().catch((error) => {
+  debug("[BACKGROUND] Failed to initialize backend:", error);
+  console.error("Failed to initialize backend:", error);
+});
 
 // Handle extension installation
 browser.runtime.onInstalled.addListener(async (details) => {
@@ -26,20 +33,11 @@ browser.runtime.onInstalled.addListener(async (details) => {
 
 // Handle messages from popup and content scripts
 browser.runtime.onMessage.addListener(
+  // @ts-expect-error
   async (request: BackgroundRequest, sender) => {
     if (request.type === "rpc") {
       const tabId = sender.tab?.id;
-      debug(
-        "[BACKGROUND] Processing RPC request:",
-        request.method,
-        "Tab ID:",
-        tabId,
-      );
-
-      if (!tabId) {
-        debug("[BACKGROUND] No tab ID provided");
-        return { success: false, error: "No tab ID" };
-      }
+      debug("[BACKGROUND] Processing RPC request:", request.method);
 
       return await handleRpcRequest(request, tabId);
     }
@@ -57,10 +55,9 @@ browser.runtime.onMessage.addListener(
         });
         return { success: true };
       }
-
-      default:
-        return { error: "Unknown action" };
     }
+
+    return { error: "Unknown action" };
   },
 );
 

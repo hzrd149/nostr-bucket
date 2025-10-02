@@ -8,8 +8,17 @@ import {
   getEvent,
   getEventsByFilters,
   getReplaceableEvent,
-  searchEvents,
+  subscribeToEvents,
+  supportsFeature,
+  setBackend,
+  getCurrentBackendType,
+  getBackendStatus,
+  getBackends,
+  reconnectBackends,
+  isBackendConnected,
+  type BackendType,
 } from "./methods";
+import type { StreamHandlers, Features } from "../interface";
 
 // Active stream subscriptions
 const activeStreams = new Map<
@@ -19,6 +28,7 @@ const activeStreams = new Map<
     params: unknown[];
     tabId: number;
     active: boolean;
+    subscription?: { close: () => void };
   }
 >();
 
@@ -34,28 +44,66 @@ async function handleStreamSubscription(
   debug("[BACKGROUND] Starting stream subscription:", streamId, method, params);
 
   try {
-    let iterator: AsyncIterableIterator<NostrEvent>;
+    let subscription: { close: () => void };
+
+    const handlers: StreamHandlers = {
+      event: (event: NostrEvent) => {
+        if (!activeStreams.has(streamId)) return; // Stream was closed
+
+        debug("[BACKGROUND] Sending stream event:", event.id);
+
+        const streamEvent: BackgroundStreamEvent = {
+          type: "stream",
+          streamId,
+          event,
+        };
+
+        browser.tabs.sendMessage(tabId, streamEvent).catch((error) => {
+          debug("[BACKGROUND] Error sending stream event:", error);
+        });
+      },
+      error: (error: Error) => {
+        debug("[BACKGROUND] Stream error:", error);
+
+        const errorEvent: BackgroundStreamEvent = {
+          type: "stream",
+          streamId,
+          error: error.message,
+        };
+
+        browser.tabs.sendMessage(tabId, errorEvent).catch((sendError) => {
+          debug("[BACKGROUND] Error sending stream error event:", sendError);
+        });
+      },
+      complete: () => {
+        debug("[BACKGROUND] Stream complete for:", streamId);
+
+        const doneEvent: BackgroundStreamEvent = {
+          type: "stream",
+          streamId,
+          done: true,
+        };
+
+        browser.tabs.sendMessage(tabId, doneEvent).catch((error) => {
+          debug("[BACKGROUND] Error sending stream done event:", error);
+        });
+
+        // Clean up
+        activeStreams.delete(streamId);
+      },
+    };
 
     switch (method) {
       case "filters": {
         const filters = params[0] as Filter[];
-        debug("[BACKGROUND] Creating filters iterator for:", filters);
-        iterator = getEventsByFilters(filters);
-        break;
-      }
-      case "search": {
-        const query = params[0] as string;
-        const filters = params[1] as Filter[];
-        debug("[BACKGROUND] Creating search iterator for:", query, filters);
-        iterator = searchEvents(query, filters);
+        debug("[BACKGROUND] Creating filters subscription for:", filters);
+        subscription = getEventsByFilters(filters, handlers);
         break;
       }
       case "subscribe": {
-        // For subscribe, we'll implement a real-time subscription later
-        // For now, just return existing events
         const filters = params[0] as Filter[];
-        debug("[BACKGROUND] Creating subscribe iterator for:", filters);
-        iterator = getEventsByFilters(filters);
+        debug("[BACKGROUND] Creating subscribe subscription for:", filters);
+        subscription = subscribeToEvents(filters, handlers);
         break;
       }
       default:
@@ -63,70 +111,18 @@ async function handleStreamSubscription(
         throw new Error(`Unknown stream method: ${method}`);
     }
 
-    // Store active stream
+    // Store active stream with subscription
     activeStreams.set(streamId, {
       method,
       params,
       tabId,
       active: true,
+      subscription,
     });
-    debug("[BACKGROUND] Stream stored, processing events...");
 
-    // Process stream
-    let eventCount = 0;
-    for await (const event of iterator) {
-      if (!activeStreams.has(streamId)) {
-        debug("[BACKGROUND] Stream was closed, breaking loop");
-        break; // Stream was closed
-      }
-
-      eventCount++;
-      debug(
-        "[BACKGROUND] Sending stream event:",
-        eventCount,
-        "Event ID:",
-        event.id,
-      );
-
-      const streamEvent: BackgroundStreamEvent = {
-        type: "stream",
-        streamId,
-        event,
-      };
-
-      try {
-        await browser.tabs.sendMessage(tabId, streamEvent);
-      } catch (error) {
-        debug("[BACKGROUND] Error sending stream event:", error);
-        console.error("Error sending stream event:", error);
-        break;
-      }
-    }
-
-    // Send done signal
-    debug(
-      "[BACKGROUND] Stream complete, sending done signal. Total events:",
-      eventCount,
-    );
-    const doneEvent: BackgroundStreamEvent = {
-      type: "stream",
-      streamId,
-      done: true,
-    };
-
-    try {
-      await browser.tabs.sendMessage(tabId, doneEvent);
-    } catch (error) {
-      debug("[BACKGROUND] Error sending stream done event:", error);
-      console.error("Error sending stream done event:", error);
-    }
-
-    // Clean up
-    activeStreams.delete(streamId);
-    debug("[BACKGROUND] Stream cleanup complete for:", streamId);
+    debug("[BACKGROUND] Stream subscription created for:", streamId);
   } catch (error) {
     debug("[BACKGROUND] Error in stream subscription:", error);
-    console.error("Error in stream subscription:", error);
 
     // Send error
     const errorEvent: BackgroundStreamEvent = {
@@ -139,7 +135,6 @@ async function handleStreamSubscription(
       await browser.tabs.sendMessage(tabId, errorEvent);
     } catch (sendError) {
       debug("[BACKGROUND] Error sending stream error event:", sendError);
-      console.error("Error sending stream error event:", sendError);
     }
 
     // Clean up
@@ -153,14 +148,9 @@ async function handleStreamSubscription(
  */
 export async function handleRpcRequest(
   request: BackgroundRequest,
-  tabId: number,
+  tabId?: number,
 ): Promise<{ success: boolean; result?: unknown; error?: string }> {
-  debug(
-    "[BACKGROUND] Processing RPC request:",
-    request.method,
-    "Tab ID:",
-    tabId,
-  );
+  debug("[BACKGROUND] Processing RPC request:", request.method);
 
   try {
     let result: unknown;
@@ -209,7 +199,6 @@ export async function handleRpcRequest(
       }
 
       case "filters":
-      case "search":
       case "subscribe": {
         // Handle stream methods
         debug(
@@ -218,6 +207,11 @@ export async function handleRpcRequest(
           "Stream ID:",
           request.streamId,
         );
+
+        if (!tabId) {
+          debug("[BACKGROUND] No tab ID provided");
+          return { success: false, error: "No tab ID" };
+        }
 
         if (request.streamId) {
           // Start stream subscription
@@ -244,8 +238,81 @@ export async function handleRpcRequest(
       case "close_stream": {
         const streamId = request.params[0] as string;
         debug("[BACKGROUND] Closing stream:", streamId);
+        const stream = activeStreams.get(streamId);
+        if (stream?.subscription) {
+          stream.subscription.close();
+        }
         activeStreams.delete(streamId);
         return { success: true, result: "Stream closed" };
+      }
+
+      case "supports": {
+        const feature = request.params[0] as Features;
+        debug("[BACKGROUND] Checking feature support:", feature);
+        result = await supportsFeature(feature);
+        debug("[BACKGROUND] Feature support result:", result);
+        break;
+      }
+
+      case "set_backend": {
+        const backendType = request.params[0] as BackendType;
+        debug("[BACKGROUND] Setting backend to:", backendType);
+        try {
+          await setBackend(backendType);
+          return {
+            success: true,
+            result: `Backend switched to ${backendType}`,
+          };
+        } catch (error) {
+          debug("[BACKGROUND] Error switching backend:", error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          };
+        }
+      }
+
+      case "get_backend": {
+        const currentBackend = getCurrentBackendType();
+        debug("[BACKGROUND] Current backend:", currentBackend);
+        return { success: true, result: currentBackend };
+      }
+
+      case "get_backend_status": {
+        const status = getBackendStatus();
+        debug("[BACKGROUND] Backend status:", status);
+        return { success: true, result: status };
+      }
+
+      case "get_backends": {
+        const backends = getBackends();
+        debug("[BACKGROUND] Available backends:", backends);
+        return { success: true, result: backends };
+      }
+
+      case "reconnect_backends": {
+        debug("[BACKGROUND] Reconnecting to all backends...");
+        try {
+          const connected = await reconnectBackends();
+          return {
+            success: true,
+            result: connected
+              ? "Successfully reconnected"
+              : "Failed to reconnect to any backend",
+          };
+        } catch (error) {
+          debug("[BACKGROUND] Error reconnecting backends:", error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          };
+        }
+      }
+
+      case "is_backend_connected": {
+        const connected = isBackendConnected();
+        debug("[BACKGROUND] Backend connected:", connected);
+        return { success: true, result: connected };
       }
 
       default:
@@ -270,6 +337,9 @@ export async function handleRpcRequest(
 export function cleanupStreamsForTab(tabId: number): void {
   for (const [streamId, stream] of activeStreams.entries()) {
     if (stream.tabId === tabId) {
+      if (stream.subscription) {
+        stream.subscription.close();
+      }
       activeStreams.delete(streamId);
     }
   }

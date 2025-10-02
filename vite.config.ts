@@ -1,8 +1,9 @@
+import tailwindcss from "@tailwindcss/vite";
+import { build } from "esbuild";
+import { fileURLToPath, URL } from "node:url";
+import { resolve } from "path";
 import { defineConfig, type Plugin } from "vite";
 import solid from "vite-plugin-solid";
-import { resolve } from "path";
-import { fileURLToPath, URL } from "node:url";
-import { build } from "esbuild";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -45,6 +46,7 @@ function esbuildPlugin(options: {
 export default defineConfig({
   plugins: [
     solid(),
+    tailwindcss(),
     esbuildPlugin({
       name: "background",
       input: "src/background/index.ts",

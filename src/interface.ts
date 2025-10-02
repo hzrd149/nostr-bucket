@@ -3,7 +3,19 @@ import type { Filter, NostrEvent } from "nostr-tools";
 /** Generic type for a subscription */
 export type Subscription = {
   close: () => void;
-} & AsyncIterable<NostrEvent>;
+};
+
+export type StreamHandlers = {
+  event?: (event: NostrEvent) => void;
+  error?: (error: Error) => void;
+  complete?: () => void;
+};
+
+/** Standard enums for feature checks */
+export enum Features {
+  Search = "search",
+  Subscribe = "subscribe",
+}
 
 /** Main interface for the nostr event store */
 export interface IWindowNostrEvents {
@@ -23,12 +35,12 @@ export interface IWindowNostrEvents {
   /** Count the number of events matching a filter */
   count(filters: Filter[]): Promise<number>;
 
-  /** Get events by filters */
-  filters(filters: Filter[]): AsyncIterable<NostrEvent>;
+  /** Check if the database backend supports a feature */
+  supports(feature: Features): Promise<boolean>;
 
-  /** Search for events by query and filters */
-  search?: (query: string, filters: Filter[]) => AsyncIterable<NostrEvent>;
+  /** Get events by filters */
+  filters(filters: Filter[], handlers?: StreamHandlers): Subscription;
 
   /** Subscribe to events in the database based on filters */
-  subscribe?: (filters: Filter[]) => Subscription;
+  subscribe(filters: Filter[], handlers?: StreamHandlers): Subscription;
 }

@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For } from "solid-js";
+import { For } from "solid-js";
 import type { TimelineEvent } from "./types";
 
 interface TimelineProps {

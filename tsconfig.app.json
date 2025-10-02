@@ -18,10 +18,9 @@
     "jsxImportSource": "solid-js",
 
     // Linting
-    "strict": false,
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },

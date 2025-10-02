@@ -9,6 +9,13 @@ export type FiltersParams = [Filter[]];
 export type SearchParams = [string, Filter[]];
 export type SubscribeParams = [Filter[]];
 export type CloseStreamParams = [string];
+export type SetBackendParams = ["idb" | "relay"];
+export type GetBackendParams = [];
+export type GetBackendStatusParams = [];
+export type ReconnectBackendsParams = [];
+export type IsBackendConnectedParams = [];
+export type GetBackendsParams = [];
+export type SupportsParams = [string];
 
 // Union type for all possible parameter arrays
 export type RpcParams =
@@ -19,7 +26,14 @@ export type RpcParams =
   | FiltersParams
   | SearchParams
   | SubscribeParams
-  | CloseStreamParams;
+  | CloseStreamParams
+  | SetBackendParams
+  | GetBackendParams
+  | GetBackendStatusParams
+  | ReconnectBackendsParams
+  | IsBackendConnectedParams
+  | GetBackendsParams
+  | SupportsParams;
 
 // Message types for communication between scripts
 export interface BaseMessage {
@@ -57,7 +71,14 @@ export type RpcMethod =
   | "filters"
   | "search"
   | "subscribe"
-  | "close_stream";
+  | "close_stream"
+  | "set_backend"
+  | "get_backend"
+  | "get_backend_status"
+  | "reconnect_backends"
+  | "is_backend_connected"
+  | "get_backends"
+  | "supports";
 
 // Stream subscription management
 export interface StreamSubscription {

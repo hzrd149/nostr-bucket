@@ -3,8 +3,11 @@
   "name": "Nostr Bucket",
   "version": "1.0.0",
   "description": "Provides a simple nostr event cache to all web applications",
+  "author": "hzrd149",
+  "homepage_url": "https://github.com/hzrd149/nostr-bucket",
   "permissions": ["activeTab", "storage"],
   "host_permissions": ["https://*/*", "http://*/*"],
+  "incognito": "spanning",
   "action": {
     "default_popup": "popup.html",
     "default_title": "Nostr Bucket"

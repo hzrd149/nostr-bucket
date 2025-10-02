@@ -10,7 +10,7 @@
     "build:dev": "NODE_ENV=development pnpm build",
     "preview": "vite preview",
     "package:chrome": "pnpm build && cd dist && zip -r ../nostr-bucket-chrome.zip .",
-    "package:firefox": "pnpm build && cd dist && zip -r ../nostr-bucket-firefox.zip .",
+    "package:firefox": "FFFFF=true pnpm build && cd dist && zip -r ../nostr-bucket.zip . && mv ../nostr-bucket.zip ../nostr-bucket.xpi",
     "start:firefox": "web-ext run --source-dir ./dist/"
   },
   "dependencies": {

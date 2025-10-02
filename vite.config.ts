@@ -43,6 +43,36 @@ function esbuildPlugin(options: {
   };
 }
 
+/** Fix For FireFox Fuckery */
+function FFFFF(): Plugin {
+  return {
+    name: "firefox-manifest-fix",
+    closeBundle: async () => {
+      try {
+        const fs = await import("fs/promises");
+        const path = await import("path");
+
+        const manifestPath = path.resolve(__dirname, "dist/manifest.json");
+        const manifestContent = await fs.readFile(manifestPath, "utf-8");
+        const manifest = JSON.parse(manifestContent);
+
+        // Convert service_worker to scripts array
+        if (manifest.background?.service_worker) {
+          manifest.background = {
+            scripts: [manifest.background.service_worker],
+          };
+        }
+
+        // Write the modified manifest
+        await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+        console.log("✅ Firefox manifest compatibility applied");
+      } catch (error) {
+        console.error("❌ Failed to apply Firefox manifest fix:", error);
+      }
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     solid(),
@@ -65,6 +95,7 @@ export default defineConfig({
       output: "dist/inject.js",
       format: "iife",
     }),
+    process.env.FFFFF === "true" && FFFFF(),
   ],
   publicDir: "public",
   build: {

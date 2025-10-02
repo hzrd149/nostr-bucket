@@ -21,21 +21,15 @@
     "service_worker": "background.js"
   },
   "icons": {
-    "16": "icon-16.png",
-    "24": "icon-24.png",
-    "48": "icon-48.png",
-    "128": "icon-128.png"
+    "16": "16.png",
+    "24": "24.png",
+    "48": "48.png",
+    "128": "128.png"
   },
   "web_accessible_resources": [
     {
-      "resources": ["provider.js", "inject.js"],
-      "matches": [
-        "https://*/*",
-        "http://localhost:*/*",
-        "http://0.0.0.0:*/*",
-        "http://127.0.0.1:*/*",
-        "http://*.localhost/*"
-      ]
+      "resources": ["content.js", "inject.js"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

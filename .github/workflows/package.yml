@@ -1,0 +1,53 @@
+name: Build Extension
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Chrome extension
+        run: pnpm run package:chrome
+
+      - name: Build Firefox extension
+        run: pnpm run package:firefox
+
+      - name: Upload Chrome extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nostr-bucket-chrome
+          path: nostr-bucket.zip
+          retention-days: 30
+
+      - name: Upload Firefox extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nostr-bucket-firefox
+          path: nostr-bucket.xpi
+          retention-days: 30
+
+      - name: Upload build files artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nostr-bucket-dist
+          path: dist/
+          retention-days: 30

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nostr Bucket",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Provides a simple nostr event cache to all web applications",
   "author": "hzrd149",
   "homepage_url": "https://github.com/hzrd149/nostr-bucket",

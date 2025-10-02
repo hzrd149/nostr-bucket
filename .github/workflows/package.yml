@@ -28,15 +28,15 @@ jobs:
       - name: Build Chrome extension
         run: pnpm run package:chrome
 
-      - name: Build Firefox extension
-        run: pnpm run package:firefox
-
       - name: Upload Chrome extension artifact
         uses: actions/upload-artifact@v4
         with:
           name: nostr-bucket-chrome
-          path: nostr-bucket.zip
+          path: nostr-bucket-chrome.zip
           retention-days: 30
+
+      - name: Build Firefox extension
+        run: pnpm run package:firefox
 
       - name: Upload Firefox extension artifact
         uses: actions/upload-artifact@v4

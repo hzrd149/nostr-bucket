@@ -139,16 +139,10 @@ export class NostrIdbBackend implements IBackend {
   }
 
   /**
-   * Check if the database backend supports a feature
+   * Check if the database backend supports features
    */
-  async supports(feature: Features): Promise<boolean> {
-    switch (feature) {
-      case Features.Search:
-        return false; // IndexedDB doesn't support content search
-      case Features.Subscribe:
-        return false; // IndexedDB doesn't support real-time subscriptions
-      default:
-        return false;
-    }
+  async supports(): Promise<Features[]> {
+    // IndexedDB doesn't support content search or real-time subscriptions
+    return [];
   }
 }

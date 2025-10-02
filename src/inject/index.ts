@@ -346,18 +346,18 @@ const nostrdb: IWindowNostrDB = {
     };
   },
 
-  async supports(feature: Features): Promise<boolean> {
+  async supports(): Promise<Features[]> {
     const requestId = generateId();
     const message: RequestMessage = {
       id: requestId,
       ext: EXTENSION_ID,
       type: "request",
       method: "supports",
-      params: [feature],
+      params: [],
     };
 
     const result = await sendMessage(message);
-    return Boolean(result);
+    return result as Features[];
   },
 };
 

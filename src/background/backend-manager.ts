@@ -386,12 +386,12 @@ export class BackendManager {
     return this.currentBackend.subscribe(filters, handlers);
   }
 
-  async supports(feature: Features): Promise<boolean> {
+  async supports(): Promise<Features[]> {
     await this.ensureConnection();
     if (!this.currentBackend) throw new Error("No backend connected");
 
     try {
-      return await this.currentBackend.supports(feature);
+      return await this.currentBackend.supports();
     } catch (error) {
       debug(
         "[BACKEND_MANAGER] Backend error in supports(), attempting fallback:",
@@ -401,7 +401,7 @@ export class BackendManager {
       if (!fallbackSuccess || !this.currentBackend) {
         throw new Error("No backend available after fallback");
       }
-      return await this.currentBackend.supports(feature);
+      return await this.currentBackend.supports();
     }
   }
 }

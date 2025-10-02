@@ -34,8 +34,8 @@ interface IWindowNostrDB {
   /** Count the number of events matching filters */
   count(filters: Filter[]): Promise<number>;
 
-  /** Check if the database backend supports a feature */
-  supports(feature: string): Promise<boolean>;
+  /** Check if the database backend supports features */
+  supports(): Promise<string[]>;
 
   /** Get events by filters */
   filters(filters: Filter[], handlers?: StreamHandlers): Subscription;
@@ -109,13 +109,16 @@ subscription.close();
 #### Feature Detection
 
 ```javascript
+// Get all supported features
+const supportedFeatures = await window.nostrdb.supports();
+
 // Check for search support
-if (await window.nostrdb.supports("search")) {
+if (supportedFeatures.includes("search")) {
   // Use search functionality
 }
 
 // Check for subscription support
-if (await window.nostrdb.supports("subscribe")) {
+if (supportedFeatures.includes("subscribe")) {
   // Use real-time subscriptions
 }
 ```

@@ -121,11 +121,11 @@ export function subscribeToEvents(
 }
 
 /**
- * Check if the current backend supports a feature
+ * Get all supported features from the current backend
  */
-export async function supportsFeature(feature: Features): Promise<boolean> {
+export async function getSupportedFeatures(): Promise<Features[]> {
   const backend = getCurrentBackend();
-  return await backend.supports(feature);
+  return await backend.supports();
 }
 
 /**

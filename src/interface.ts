@@ -36,7 +36,7 @@ export interface IWindowNostrDB {
   count(filters: Filter[]): Promise<number>;
 
   /** Check if the database backend supports a feature */
-  supports(feature: Features): Promise<boolean>;
+  supports(): Promise<Features[]>;
 
   /** Get events by filters */
   filters(filters: Filter[], handlers?: StreamHandlers): Subscription;

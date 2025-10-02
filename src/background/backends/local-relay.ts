@@ -6,6 +6,7 @@ import {
   type StreamHandlers,
   Features,
 } from "../../interface";
+import { debug } from "../../common/debug";
 
 export class LocalRelayBackend implements IBackend {
   private url: string;
@@ -129,19 +130,21 @@ export class LocalRelayBackend implements IBackend {
   }
 
   /**
-   * Check if the database backend supports a feature
+   * Check if the database backend supports features
    */
-  async supports(feature: Features): Promise<boolean> {
-    switch (feature) {
-      case Features.Search:
-        return nip11.fetchRelayInformation(this.url).then(
-          (info) => info.supported_nips.includes(50),
-          () => false,
-        );
-      case Features.Subscribe:
-        return true;
-      default:
-        return false;
+  async supports(): Promise<Features[]> {
+    const supportedFeatures: Features[] = [Features.Subscribe]; // Always support subscriptions
+    
+    try {
+      const info = await nip11.fetchRelayInformation(this.url);
+      if (info.supported_nips.includes(50)) {
+        supportedFeatures.push(Features.Search);
+      }
+    } catch (error) {
+      // If we can't fetch relay info, we still support Subscribe
+      debug("[LOCAL_RELAY] Could not fetch relay information:", error);
     }
+    
+    return supportedFeatures;
   }
 }

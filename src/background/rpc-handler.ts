@@ -9,7 +9,7 @@ import {
   getEventsByFilters,
   getReplaceableEvent,
   subscribeToEvents,
-  supportsFeature,
+  getSupportedFeatures,
   setBackend,
   getCurrentBackendType,
   getBackendStatus,
@@ -18,7 +18,7 @@ import {
   isBackendConnected,
   type BackendType,
 } from "./methods";
-import type { StreamHandlers, Features } from "../interface";
+import type { StreamHandlers } from "../interface";
 
 // Active stream subscriptions
 const activeStreams = new Map<
@@ -247,10 +247,9 @@ export async function handleRpcRequest(
       }
 
       case "supports": {
-        const feature = request.params[0] as Features;
-        debug("[BACKGROUND] Checking feature support:", feature);
-        result = await supportsFeature(feature);
-        debug("[BACKGROUND] Feature support result:", result);
+        debug("[BACKGROUND] Getting supported features");
+        result = await getSupportedFeatures();
+        debug("[BACKGROUND] Supported features:", result);
         break;
       }
 

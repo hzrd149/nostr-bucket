@@ -15,7 +15,7 @@ export type GetBackendStatusParams = [];
 export type ReconnectBackendsParams = [];
 export type IsBackendConnectedParams = [];
 export type GetBackendsParams = [];
-export type SupportsParams = [string];
+export type SupportsParams = [];
 
 // Union type for all possible parameter arrays
 export type RpcParams =

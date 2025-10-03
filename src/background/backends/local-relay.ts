@@ -7,7 +7,7 @@ import {
 } from "applesauce-loaders/loaders";
 import { onlyEvents, Relay } from "applesauce-relay";
 import type { Filter, NostrEvent } from "nostr-tools";
-import { firstValueFrom, lastValueFrom, scan } from "rxjs";
+import { defaultIfEmpty, firstValueFrom, lastValueFrom, scan } from "rxjs";
 import { debug } from "../../common/debug";
 import {
   Features,
@@ -28,13 +28,18 @@ export class LocalRelayBackend implements IBackend {
 
     const upstream: UpstreamPool = (_relays, filters) =>
       this.relay.request(filters);
-    this.eventLoader = createEventLoader(upstream);
-    this.addressLoader = createAddressLoader(upstream);
+    this.eventLoader = createEventLoader(upstream, {
+      bufferTime: 500,
+    });
+    this.addressLoader = createAddressLoader(upstream, {
+      bufferTime: 500,
+    });
   }
 
   async connect(): Promise<void> {
     // Check if relay in available
     const info = await this.relay.getInformation();
+    if (!info) throw new Error("Failed to get relay information");
     console.log("Local relay information:", info);
 
     this.connected = true;
@@ -57,7 +62,9 @@ export class LocalRelayBackend implements IBackend {
 
   /** Get a single event by its ID */
   async event(id: string): Promise<NostrEvent | undefined> {
-    return await firstValueFrom(this.eventLoader({ id }));
+    return await lastValueFrom(
+      this.eventLoader({ id }).pipe(defaultIfEmpty(undefined)),
+    );
   }
 
   /** Get the latest replaceable event for a given kind, author, and optional identifier */
@@ -67,7 +74,9 @@ export class LocalRelayBackend implements IBackend {
     identifier?: string,
   ): Promise<NostrEvent | undefined> {
     return await firstValueFrom(
-      this.addressLoader({ kind, pubkey: pubkey, identifier }),
+      this.addressLoader({ kind, pubkey: pubkey, identifier }).pipe(
+        defaultIfEmpty(undefined),
+      ),
     );
   }
 
@@ -75,10 +84,13 @@ export class LocalRelayBackend implements IBackend {
   async count(filters: Filter[]): Promise<number> {
     // TODO: using .request here because applesauce-relay does not support count() yet
     return await lastValueFrom(
-      this.relay.request(filters).pipe(
-        onlyEvents(),
-        scan((acc, _e) => acc + 1, 0),
-      ),
+      this.relay
+        .request(filters)
+        .pipe(
+          onlyEvents(),
+          scan((acc, _e) => acc + 1, 0),
+        )
+        .pipe(defaultIfEmpty(0)),
     );
   }
 

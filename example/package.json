@@ -9,12 +9,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "nostr-idb": "0.0.0-20251003122406",
+    "nostr-tools": "^2.17.0",
     "solid-js": "^1.9.9",
-    "nostr-tools": "^2.0.0"
+    "tailwindcss": "^4.1.14",
+    "window.nostrdb.js": "^0.2.1"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "daisyui": "^5.1.26",
     "typescript": "~5.8.3",
-    "vite": "^7.1.7",
-    "vite-plugin-solid": "^2.11.8"
+    "vite": "^7.1.9",
+    "vite-plugin-solid": "^2.11.9"
+  },
+  "resolutions": {
+    "nostr-idb": "0.0.0-20251003122406"
   }
 }

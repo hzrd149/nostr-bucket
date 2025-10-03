@@ -1,132 +1,107 @@
-import { nip11, Relay } from "nostr-tools";
-import type { Filter, NostrEvent } from "nostr-tools";
-import type { IBackend } from "../backend-interface";
+import type { UpstreamPool } from "applesauce-loaders";
 import {
-  type Subscription,
-  type StreamHandlers,
-  Features,
-} from "../../interface";
+  createAddressLoader,
+  createEventLoader,
+  type AddressPointerLoader,
+  type EventPointerLoader,
+} from "applesauce-loaders/loaders";
+import { onlyEvents, Relay } from "applesauce-relay";
+import type { Filter, NostrEvent } from "nostr-tools";
+import { firstValueFrom, lastValueFrom, scan } from "rxjs";
 import { debug } from "../../common/debug";
+import {
+  Features,
+  type StreamHandlers,
+  type Subscription,
+} from "../../interface";
+import type { IBackend } from "../backend-interface";
 
 export class LocalRelayBackend implements IBackend {
-  private url: string;
-  private relay: Relay | null = null;
-  private connected = false;
+  private relay: Relay;
+  private eventLoader: EventPointerLoader;
+  private addressLoader: AddressPointerLoader;
 
-  private requestId = 0;
+  connected = false;
 
   constructor(url: string) {
-    this.url = url;
+    this.relay = new Relay(url);
+
+    const upstream: UpstreamPool = (_relays, filters) =>
+      this.relay.request(filters);
+    this.eventLoader = createEventLoader(upstream);
+    this.addressLoader = createAddressLoader(upstream);
   }
 
   async connect(): Promise<void> {
-    if (this.connected) return;
+    // Check if relay in available
+    const info = await this.relay.getInformation();
+    console.log("Local relay information:", info);
 
-    this.relay = new Relay(this.url);
-    await this.relay.connect();
     this.connected = true;
   }
 
   async close(): Promise<void> {
-    if (!this.connected || !this.relay) return;
-
-    await this.relay.close();
-    this.relay = null;
+    this.relay.close();
     this.connected = false;
   }
 
   isConnected(): boolean {
-    return this.connected && this.relay !== null;
+    return this.connected;
   }
 
-  /**
-   * Add an event to the relay
-   */
+  /** Add an event to the relay */
   async add(event: NostrEvent): Promise<boolean> {
-    if (!this.relay) throw new Error("Relay not connected");
-
-    try {
-      await this.relay.publish(event);
-      return true;
-    } catch (error) {
-      console.error("Failed to publish event to relay:", error);
-      return false;
-    }
+    const res = await this.relay.publish(event);
+    return res.ok;
   }
 
-  /**
-   * Get a single event by its ID
-   */
-  async event(_id: string): Promise<NostrEvent | undefined> {
-    if (!this.relay) throw new Error("Relay not connected");
-
-    // TODO: Implement relay-based event retrieval
-    // This would typically involve querying the relay for the specific event
-    throw new Error("Relay-based event not yet implemented");
+  /** Get a single event by its ID */
+  async event(id: string): Promise<NostrEvent | undefined> {
+    return await firstValueFrom(this.eventLoader({ id }));
   }
 
-  /**
-   * Get the latest replaceable event for a given kind, author, and optional identifier
-   */
+  /** Get the latest replaceable event for a given kind, author, and optional identifier */
   async replaceable(
-    _kind: number,
-    _author: string,
-    _identifier?: string,
+    kind: number,
+    pubkey: string,
+    identifier?: string,
   ): Promise<NostrEvent | undefined> {
-    if (!this.relay) throw new Error("Relay not connected");
-
-    // TODO: Implement relay-based replaceable event retrieval
-    throw new Error("Relay-based replaceable not yet implemented");
+    return await firstValueFrom(
+      this.addressLoader({ kind, pubkey: pubkey, identifier }),
+    );
   }
 
-  /**
-   * Count events matching the given filters
-   */
+  /** Count events matching the given filters */
   async count(filters: Filter[]): Promise<number> {
-    if (!this.relay) throw new Error("Relay not connected");
-
-    return this.relay!.count(filters, { id: String(this.requestId++) });
+    // TODO: using .request here because applesauce-relay does not support count() yet
+    return await lastValueFrom(
+      this.relay.request(filters).pipe(
+        onlyEvents(),
+        scan((acc, _e) => acc + 1, 0),
+      ),
+    );
   }
 
-  /**
-   * Get events matching the given filters
-   */
-  filters(filters: Filter[], handlers?: StreamHandlers): Subscription {
-    if (!this.relay) throw new Error("Relay not connected");
-
-    let closed = false;
-
-    const sub = this.relay.subscribe(filters, {
-      onevent: (event) => {
-        if (!closed && handlers?.event) {
-          handlers.event(event);
-        }
-      },
-      oneose: () => {
-        if (!closed && handlers?.complete) {
-          handlers.complete();
-        }
-      },
-      onclose: () => {
-        if (!closed && handlers?.complete) {
-          handlers.complete();
-        }
-      },
+  /** Get events matching the given filters */
+  filters(filters: Filter[], handlers: StreamHandlers): Subscription {
+    const sub = this.relay.request(filters).pipe(onlyEvents()).subscribe({
+      next: handlers.event,
+      error: handlers.error,
+      complete: handlers.complete,
     });
-
-    return {
-      close: () => {
-        closed = true;
-        sub.close();
-      },
-    };
+    return { close: () => sub.unsubscribe() };
   }
 
   /**
    * Subscribe to events in the relay based on filters
    */
-  subscribe(filters: Filter[], handlers?: StreamHandlers): Subscription {
-    return this.filters(filters, handlers);
+  subscribe(filters: Filter[], handlers: StreamHandlers): Subscription {
+    const sub = this.relay.subscription(filters).pipe(onlyEvents()).subscribe({
+      next: handlers.event,
+      error: handlers.error,
+      complete: handlers.complete,
+    });
+    return { close: () => sub.unsubscribe() };
   }
 
   /**
@@ -134,17 +109,16 @@ export class LocalRelayBackend implements IBackend {
    */
   async supports(): Promise<Features[]> {
     const supportedFeatures: Features[] = [Features.Subscribe]; // Always support subscriptions
-    
+
     try {
-      const info = await nip11.fetchRelayInformation(this.url);
-      if (info.supported_nips.includes(50)) {
+      const info = await this.relay.getInformation();
+      if (info?.supported_nips.includes(50))
         supportedFeatures.push(Features.Search);
-      }
     } catch (error) {
       // If we can't fetch relay info, we still support Subscribe
       debug("[LOCAL_RELAY] Could not fetch relay information:", error);
     }
-    
+
     return supportedFeatures;
   }
 }

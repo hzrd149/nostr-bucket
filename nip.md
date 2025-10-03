@@ -38,10 +38,10 @@ interface IWindowNostrDB {
   supports(): Promise<string[]>;
 
   /** Get events by filters */
-  filters(filters: Filter[], handlers?: StreamHandlers): Subscription;
+  filters(filters: Filter[], handlers: StreamHandlers): Subscription;
 
   /** Subscribe to events in the database based on filters */
-  subscribe(filters: Filter[], handlers?: StreamHandlers): Subscription;
+  subscribe(filters: Filter[], handlers: StreamHandlers): Subscription;
 }
 ```
 

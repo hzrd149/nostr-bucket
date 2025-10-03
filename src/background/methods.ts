@@ -103,7 +103,7 @@ export async function countEvents(filters: Filter[]): Promise<number> {
  */
 export function getEventsByFilters(
   filters: Filter[],
-  handlers?: StreamHandlers,
+  handlers: StreamHandlers,
 ): Subscription {
   const backend = getCurrentBackend();
   return backend.filters(filters, handlers);
@@ -114,7 +114,7 @@ export function getEventsByFilters(
  */
 export function subscribeToEvents(
   filters: Filter[],
-  handlers?: StreamHandlers,
+  handlers: StreamHandlers,
 ): Subscription {
   const backend = getCurrentBackend();
   return backend.subscribe(filters, handlers);

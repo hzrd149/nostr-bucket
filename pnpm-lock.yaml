@@ -8,12 +8,15 @@ importers:
 
   .:
     dependencies:
+      applesauce-loaders:
+        specifier: ^4.0.0
+        version: 4.0.0(typescript@5.8.3)
       applesauce-relay:
         specifier: ^4.0.0
         version: 4.0.0(typescript@5.8.3)
       nostr-idb:
-        specifier: ^2.4.0
-        version: 2.4.0(typescript@5.8.3)
+        specifier: 0.0.0-20251003110238
+        version: 0.0.0-20251003110238(typescript@5.8.3)
       nostr-tools:
         specifier: ^2.17.0
         version: 2.17.0(typescript@5.8.3)
@@ -736,6 +739,9 @@ packages:
 
   applesauce-core@4.0.0:
     resolution: {integrity: sha512-cXg9lDU0PKpAeVw7FGN3jzKB/k9kX5YOI7uwzrZhibYB5PfpHAYRiVexxBuFdT2RNaDgQogXl75gV2hag5uLuw==}
+
+  applesauce-loaders@4.0.0:
+    resolution: {integrity: sha512-yNlpzCeUlkpq1jehyHPre0C3ey9anMDTpPysqdV9Rca+U2QnAWduzQ+Eo8FVS1X9jZRD6s/gkLSnCnW1+kX7uQ==}
 
   applesauce-relay@4.0.0:
     resolution: {integrity: sha512-qoWjh9dABdL7AuSe4cmKiyZhNvrVZBRXA1GQgWiKSynm+rNYP+6Rc4SDT3vndNMqx9jRKbL4jwvKeU5vkVpFRA==}
@@ -1558,16 +1564,8 @@ packages:
   node-releases@2.0.21:
     resolution: {integrity: sha512-5b0pgg78U3hwXkCM8Z9b2FJdPZlr9Psr9V2gQPESdGHqbntyFJKFW4r5TeWGFzafGY3hzs1JC62VEQMbl1JFkw==}
 
-  nostr-idb@2.4.0:
-    resolution: {integrity: sha512-74z4+8l4lfk280mPemA0kTiAmCuBX+9FGCWByD/K+jb/Ojaj3rpFFC8EvOG4ts3qBDdITmwwInUNJIp2w+OXKg==}
-
-  nostr-tools@2.14.3:
-    resolution: {integrity: sha512-nk3h/V+JJ4YPIy77insbFjz80hWNEpicUGMXzF3YCM/CSx9aBzeGv766dEpIfIwtGg/yDvTTFS9qUBg5Ouk4/A==}
-    peerDependencies:
-      typescript: '>=5.0.0'
-    peerDependenciesMeta:
-      typescript:
-        optional: true
+  nostr-idb@0.0.0-20251003110238:
+    resolution: {integrity: sha512-00B84drtTu5GuyLLHKjGDOgncab1b5ioCpDlJw2gbjFSiLeLw3+q610G/iHvD7XQTzr4IdEhPkHg2E6H7ujkzg==}
 
   nostr-tools@2.17.0:
     resolution: {integrity: sha512-lrvHM7cSaGhz7F0YuBvgHMoU2s8/KuThihDoOYk8w5gpVHTy0DeUCAgCN8uLGeuSl5MAWekJr9Dkfo5HClqO9w==}
@@ -2730,6 +2728,16 @@ snapshots:
       - supports-color
       - typescript
 
+  applesauce-loaders@4.0.0(typescript@5.8.3):
+    dependencies:
+      applesauce-core: 4.0.0(typescript@5.8.3)
+      nanoid: 5.1.6
+      nostr-tools: 2.17.0(typescript@5.8.3)
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+
   applesauce-relay@4.0.0(typescript@5.8.3):
     dependencies:
       '@noble/hashes': 1.8.0
@@ -3520,26 +3528,14 @@ snapshots:
 
   node-releases@2.0.21: {}
 
-  nostr-idb@2.4.0(typescript@5.8.3):
+  nostr-idb@0.0.0-20251003110238(typescript@5.8.3):
     dependencies:
       debug: 4.4.3
       idb: 8.0.3
-      nostr-tools: 2.14.3(typescript@5.8.3)
+      nostr-tools: 2.17.0(typescript@5.8.3)
     transitivePeerDependencies:
       - supports-color
       - typescript
-
-  nostr-tools@2.14.3(typescript@5.8.3):
-    dependencies:
-      '@noble/ciphers': 0.5.3
-      '@noble/curves': 1.2.0
-      '@noble/hashes': 1.3.1
-      '@scure/base': 1.1.1
-      '@scure/bip32': 1.3.1
-      '@scure/bip39': 1.2.1
-      nostr-wasm: 0.1.0
-    optionalDependencies:
-      typescript: 5.8.3
 
   nostr-tools@2.17.0(typescript@5.8.3):
     dependencies:

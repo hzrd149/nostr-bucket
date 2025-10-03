@@ -370,7 +370,7 @@ export class BackendManager {
     }
   }
 
-  filters(filters: Filter[], handlers?: StreamHandlers): Subscription {
+  filters(filters: Filter[], handlers: StreamHandlers): Subscription {
     // For streaming methods, we can't easily retry, so just ensure connection
     if (!this.currentBackend || !this.currentBackend.isConnected()) {
       throw new Error("No backend connected");
@@ -378,7 +378,7 @@ export class BackendManager {
     return this.currentBackend.filters(filters, handlers);
   }
 
-  subscribe(filters: Filter[], handlers?: StreamHandlers): Subscription {
+  subscribe(filters: Filter[], handlers: StreamHandlers): Subscription {
     // For streaming methods, we can't easily retry, so just ensure connection
     if (!this.currentBackend || !this.currentBackend.isConnected()) {
       throw new Error("No backend connected");

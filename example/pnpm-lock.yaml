@@ -4,16 +4,10 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  nostr-idb: 0.0.0-20251003122406
-
 importers:
 
   .:
     dependencies:
-      nostr-idb:
-        specifier: 0.0.0-20251003122406
-        version: 0.0.0-20251003122406(typescript@5.8.3)
       nostr-tools:
         specifier: ^2.17.0
         version: 2.17.0(typescript@5.8.3)
@@ -24,8 +18,8 @@ importers:
         specifier: ^4.1.14
         version: 4.1.14
       window.nostrdb.js:
-        specifier: ^0.2.1
-        version: 0.2.1(typescript@5.8.3)
+        specifier: ^0.2.3
+        version: 0.2.3(typescript@5.8.3)
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.1.14
@@ -756,8 +750,8 @@ packages:
   node-releases@2.0.21:
     resolution: {integrity: sha512-5b0pgg78U3hwXkCM8Z9b2FJdPZlr9Psr9V2gQPESdGHqbntyFJKFW4r5TeWGFzafGY3hzs1JC62VEQMbl1JFkw==}
 
-  nostr-idb@0.0.0-20251003122406:
-    resolution: {integrity: sha512-lYGvoXI7QNUKyKHbT+xmQhPoDioVw0ci+LVlYaH/z1B3Eg0xy1LXXtxoIKwkdBDJObA+hdKh6puWI5+RUzzVqQ==}
+  nostr-idb@3.0.0:
+    resolution: {integrity: sha512-b35hdDxZ08mzXseik9xsUsGCk0MNeBZNpdbl6MsO7fBH0GYkKGvVsQ/MNjWFet1j3TXK3Iob3gpAxjKnSw6uJw==}
 
   nostr-tools@2.17.0:
     resolution: {integrity: sha512-lrvHM7cSaGhz7F0YuBvgHMoU2s8/KuThihDoOYk8w5gpVHTy0DeUCAgCN8uLGeuSl5MAWekJr9Dkfo5HClqO9w==}
@@ -902,8 +896,8 @@ packages:
       vite:
         optional: true
 
-  window.nostrdb.js@0.2.1:
-    resolution: {integrity: sha512-Qafxxwb6WgvU/5H2RIJR1RAOlbRYrwtZE2NSJXkTGrCqUQrTLqeEkqZeSLMc9SAg9pKpMJlxuNsh9A1Bdd5c5w==}
+  window.nostrdb.js@0.2.3:
+    resolution: {integrity: sha512-bpzj0eAbcfy247j3ZDfMB8c1fkgR3fIIUCYccprKsqRPRwWA57/6bN6zC1TzDpxf4+9/eriVG97CyjqMLRdwQQ==}
     peerDependencies:
       typescript: ^5
 
@@ -1492,7 +1486,7 @@ snapshots:
 
   node-releases@2.0.21: {}
 
-  nostr-idb@0.0.0-20251003122406(typescript@5.8.3):
+  nostr-idb@3.0.0(typescript@5.8.3):
     dependencies:
       debug: 4.4.3
       idb: 8.0.3
@@ -1639,9 +1633,9 @@ snapshots:
     optionalDependencies:
       vite: 7.1.9(jiti@2.6.1)(lightningcss@1.30.1)
 
-  window.nostrdb.js@0.2.1(typescript@5.8.3):
+  window.nostrdb.js@0.2.3(typescript@5.8.3):
     dependencies:
-      nostr-idb: 0.0.0-20251003122406(typescript@5.8.3)
+      nostr-idb: 3.0.0(typescript@5.8.3)
       nostr-tools: 2.17.0(typescript@5.8.3)
       typescript: 5.8.3
     transitivePeerDependencies:

@@ -15,8 +15,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0(typescript@5.8.3)
       nostr-idb:
-        specifier: 0.0.0-20251003122406
-        version: 0.0.0-20251003122406(typescript@5.8.3)
+        specifier: ^3.0.0
+        version: 3.0.0(typescript@5.8.3)
       nostr-tools:
         specifier: ^2.17.0
         version: 2.17.0(typescript@5.8.3)
@@ -810,8 +810,8 @@ packages:
   node-releases@2.0.21:
     resolution: {integrity: sha512-5b0pgg78U3hwXkCM8Z9b2FJdPZlr9Psr9V2gQPESdGHqbntyFJKFW4r5TeWGFzafGY3hzs1JC62VEQMbl1JFkw==}
 
-  nostr-idb@0.0.0-20251003122406:
-    resolution: {integrity: sha512-lYGvoXI7QNUKyKHbT+xmQhPoDioVw0ci+LVlYaH/z1B3Eg0xy1LXXtxoIKwkdBDJObA+hdKh6puWI5+RUzzVqQ==}
+  nostr-idb@3.0.0:
+    resolution: {integrity: sha512-b35hdDxZ08mzXseik9xsUsGCk0MNeBZNpdbl6MsO7fBH0GYkKGvVsQ/MNjWFet1j3TXK3Iob3gpAxjKnSw6uJw==}
 
   nostr-tools@2.17.0:
     resolution: {integrity: sha512-lrvHM7cSaGhz7F0YuBvgHMoU2s8/KuThihDoOYk8w5gpVHTy0DeUCAgCN8uLGeuSl5MAWekJr9Dkfo5HClqO9w==}
@@ -1614,7 +1614,7 @@ snapshots:
 
   node-releases@2.0.21: {}
 
-  nostr-idb@0.0.0-20251003122406(typescript@5.8.3):
+  nostr-idb@3.0.0(typescript@5.8.3):
     dependencies:
       debug: 4.4.3
       idb: 8.0.3
